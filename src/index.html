@@ -1,32 +1,853 @@
 <!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8" />
-        <link rel="stylesheet" href="styles.css" />
-        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-        <title>PakePlus App</title>
-        <script type="module" src="/main.js" defer></script>
-    </head>
+<html lang="zh">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>图片识别系统</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'PingFang SC', 'Microsoft YaHei', sans-serif;
+        }
 
-    <body>
-        <main class="container">
-            <h1>Welcome to PakePlus</h1>
-            <form class="row" id="greet-form">
-                <input id="inputValue" placeholder="Enter a something..." />
-            </form>
-            <div class="resultBox">
-                <span>result: </span>
-                <span id="result"></span>
+        body {
+            background-color: #f5f7fa;
+            min-height: 100vh;
+            padding: 40px 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 20px;
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+
+        .header h1 {
+            color: #2c3e50;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #7f8c8d;
+            font-size: 16px;
+        }
+        
+        .section-toggle {
+            display: flex;
+            justify-content: center;
+            margin-bottom: 20px;
+        }
+        
+        .toggle-btn {
+            padding: 10px 20px;
+            margin: 0 10px;
+            border: none;
+            background-color: #e0e0e0;
+            color: #2c3e50;
+            border-radius: 4px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .toggle-btn.active {
+            background-color: #3498db;
+            color: white;
+        }
+        
+        .toggle-btn:hover {
+            background-color: #2980b9;
+            color: white;
+        }
+        
+        .download-btn {
+            padding: 12px 24px;
+            margin: 0 15px;
+            border: none;
+            background-color: #3498db;
+            color: white;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 160px;
+            font-weight: 500;
+            font-size: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        }
+        
+        .download-btn:hover {
+            background-color: #2980b9;
+            transform: translateY(-3px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        
+        .download-btn::before {
+            content: '📥';
+            margin-right: 10px;
+            font-size: 18px;
+            transition: transform 0.3s ease;
+        }
+        
+        .download-btn:hover::before {
+            transform: translateY(-2px);
+        }
+
+        .upload-container {
+            display: flex;
+            justify-content: center;
+            flex-wrap: nowrap;
+        }
+
+        .upload-section {
+            background: white;
+            border-radius: 12px;
+            padding: 24px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            width: 400px;
+            transition: transform 0.3s ease;
+        }
+
+        .upload-section:hover {
+            transform: translateY(-5px);
+        }
+
+        .drop-zone {
+            width: 100%;
+            height: 240px;
+            border: 2px dashed #e0e0e0;
+            border-radius: 8px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            background-color: #fafafa;
+            margin-bottom: 20px;
+        }
+
+        .drop-zone#dropZone1:before {
+            content: '📄';
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+        
+        .drop-zone#dropZone2:before {
+            content: '🆔';
+            font-size: 40px;
+            margin-bottom: 10px;
+        }
+
+        .drop-zone.dragover {
+            border-color: #3498db;
+            background-color: #ecf0f1;
+        }
+
+        .drop-zone-text {
+            color: #7f8c8d;
+            font-size: 16px;
+            text-align: center;
+        }
+
+        .loading {
+            position: relative;
+            color: transparent !important;
+        }
+
+        .loading::after {
+            content: '';
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            width: 20px;
+            height: 20px;
+            border: 2px solid #3498db;
+            border-radius: 50%;
+            border-right-color: transparent;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            from {
+                transform: translate(-50%, -50%) rotate(0deg);
+            }
+            to {
+                transform: translate(-50%, -50%) rotate(360deg);
+            }
+        }
+
+        .result {
+            position: relative;
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 16px;
+            min-height: 120px;
+            font-size: 14px;
+            line-height: 1.6;
+            color: #2c3e50;
+            word-break: break-all;
+            border: 1px solid #e9ecef;
+        }
+
+        .result:empty::before {
+            content: '等待上传图片...';
+            color: #95a5a6;
+            font-style: italic;
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+        }
+
+        @media (max-width: 768px) {
+            .upload-section {
+                width: 100%;
+                margin: 0 20px;
+            }
+            
+            .header h1 {
+                font-size: 24px;
+            }
+            
+            .drop-zone {
+                height: 200px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        
+        
+        <div class="upload-container">
+            <div class="upload-section">
+                <div class="drop-zone" id="dropZone1">
+                    <div class="drop-zone-text">
+                        拖拽合格证图片进行识别
+                    </div>
+                </div>
             </div>
-            <div class="invokeBox">
-                <button id="openUrl">open_url_browser</button>
-                <button id="openUrlNew">open_url_new</button>
-                <button id="runCommand">run_command</button>
-                <button id="downloadFile">download_file</button>
-                <button id="getExeDir">get_exe_dir</button>
-                <button id="getEnvVar">get_env_var</button>
-                <button id="findPort">find_port</button>
+            
+            <div class="upload-section">
+                <div class="drop-zone" id="dropZone2">
+                    <div class="drop-zone-text">
+                        拖拽身份证图片进行识别
+                    </div>
+                </div>
             </div>
-        </main>
-    </body>
+    </div>
+
+
+
+    <script>
+        // 添加全局变量存储识别结果
+        let certificateResult = null;  // 存储合格证识别结果
+        let idCardResult = null;      // 存储身份证识别结果
+        let currentSection = 'form';  // 当前显示区域：form或download
+
+        function initDropZone(dropZoneId, resultId) {
+            const dropZone = document.getElementById(dropZoneId);
+            const resultDiv = document.getElementById(resultId);
+
+            // 阻止默认拖拽行为
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+                document.body.addEventListener(eventName, preventDefaults, false);
+            });
+
+            function preventDefaults(e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+
+            // 添加拖拽效果
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => highlight(dropZone), false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, () => unhighlight(dropZone), false);
+            });
+
+            // 处理图片拖放
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                // 传入dropZoneId来区分不同的拖拽区域
+                handleFiles(files, resultDiv, dropZoneId);
+            }, false);
+        }
+
+        function highlight(dropZone) {
+            dropZone.classList.add('dragover');
+        }
+
+        function unhighlight(dropZone) {
+            dropZone.classList.remove('dragover');
+        }
+
+        // 修改handleFiles函数，移除结果显示相关代码
+        function handleFiles(files, resultDiv, dropZoneId) {
+            const file = files[0];
+            if (file && file.type.startsWith('image/')) {
+                const dropZone = document.getElementById(dropZoneId);
+                const dropZoneText = dropZone.querySelector('.drop-zone-text');
+                dropZoneText.classList.add('loading');
+                
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const cleanBase64 = e.target.result.replace(/^data:image\/\w+;base64,/, '');
+                    
+                    // fetch('http://127.0.0.1:1224/api/ocr'
+                    fetch('http://localhost/shitu/', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded'
+                        },
+                        body: 'base64_image=' + encodeURIComponent(cleanBase64)
+                        // "base64": cleanBase64,
+                        // "options": {
+                        //     "tbpu.parser": "multi_none",
+                        //     "data.format": "text"
+                    })
+                    .then(response => {
+                        if (!response.ok) {
+                            throw new Error(`HTTP error! status: ${response.status}`);
+                        }
+                        data = response.text();
+                        
+                        return data;
+                    })
+                    .then(data => {
+                        // 只存储识别结果到对应变量，不再显示结果
+                        if (dropZoneId === 'dropZone1') {
+                            data = data.replace("极氮", '极氪'); 
+                            data = data.replace("I", '1'); 
+                            data = data.replace("O", '0'); 
+
+                            certificateResult = data;
+                            //处理合格证识别结果
+
+                            //提取合格证编号（截取“合格证编号”与“2.”之间的内容）并移除空格
+                            const certificateNumber = data.substring(data.indexOf("合格证编号")+5, data.indexOf("2.")).trim();
+                            
+                            
+                            //提取品牌_类型（截取“合格证编号”与“2.”之间的内容）并移除两边空格
+                            const brand_type = data.substring(data.indexOf("车辆名称")+4, data.indexOf("5.")).trim();
+                            //空格分割brand_type为品牌和类型
+                            const brand_type_array = brand_type.split(" ");
+                            const brand = brand_type_array[0];
+                            const type = brand_type_array[1];
+                            
+                            //提取车辆型号（截取“型号”与“6.”之间的内容）并移除两边空格
+                            const vehicleModel = data.substring(data.indexOf("型号")+2, data.indexOf("6.")).trim();
+                          
+
+                            const brand_vehicleModel=brand+" "+vehicleModel;
+
+                            //提取发动机型号（截取“发动机型号”与“7.”之间的内容）并移除两边空格
+                            const engineModel = data.substring(data.indexOf("发动机号")+4, data.indexOf("12.")).trim();
+                            
+                            
+                            //提取车架号（截取“6.”与“7.”之间的字母和数字部分，移除汉字部分和其他字符）并移除两边空格
+                            const vehicleFrameNumber = data.substring(data.indexOf("6.")+2, data.indexOf("7.")).replace(/[\u4e00-\u9fa5]/g, '').replace(/[^a-zA-Z0-9]/g, '').trim();
+                            
+
+                            //提取吨位（截取“28.”与“29.”之间的数字部分，移除汉字部分和其他字符）并移除两边空格,转换为数字
+                            var tonnage = (data.substring(data.indexOf("28.")+3, data.indexOf("29.")).replace(/[\u4e00-\u9fa5]/g, '').replace(/[^0-9]/g, '').trim())/1000;
+                            if(tonnage == 0){
+                                tonnage = "-";
+                            }
+                            
+
+
+                            //提取载客量（截取“33.”与“34.”之间的数字部分，移除汉字部分和其他字符）并移除两边空格,转换为数字
+                            var passengerCapacity = data.substring(data.indexOf("33.")+3, data.indexOf("34.")).replace(/[\u4e00-\u9fa5]/g, '').replace(/[^0-9]/g, '').trim()*1;
+                            
+                            if(passengerCapacity == 0){
+                                passengerCapacity = data.substring(data.indexOf("32.")+3, data.indexOf("33.")).replace(/[\u4e00-\u9fa5]/g, '').replace(/[^0-9]/g, '').trim()*1;
+                            }
+                           
+
+
+                            //提取生产地址（截取“单位地址：”与“省”之间的内容，如果没有“省”则截取“单位地址：”与“市”之间的内容，如果没有”市“则提取"单位地址："后面的两个汉字）并移除两边空格
+                            var productionAddress = data.substring(data.indexOf("单位地址：")+5, data.indexOf("省")).trim();
+                            //如果productionAddress为空获取长度大于10的地址
+                            if(productionAddress == "" || productionAddress.length > 10){
+                                productionAddress = data.substring(data.indexOf("单位地址：")+5, data.indexOf("市")).trim();
+                            }
+                            if(productionAddress == ""|| productionAddress.length > 10){
+                                productionAddress = data.substring(data.indexOf("单位地址：")+5, data.indexOf("单位地址：")+7).trim();
+                            }
+                          
+
+                            //将提取到的数据存储到本地并更新表单
+                            localStorage.setItem("certificateNumber", certificateNumber);
+                            document.getElementById('certificateNumber').value = certificateNumber;
+                            localStorage.setItem("brand_vehicleModel", brand_vehicleModel);
+                            document.getElementById('brand_vehicleModel').value = brand_vehicleModel;
+                            localStorage.setItem("type", type);
+                            document.getElementById('type').value = type;
+                            localStorage.setItem("engineModel", engineModel);
+                            document.getElementById('engineModel').value = engineModel;
+                            localStorage.setItem("vehicleFrameNumber", vehicleFrameNumber);
+                            document.getElementById('vehicleFrameNumber').value = vehicleFrameNumber;
+                            localStorage.setItem("tonnage", tonnage);
+                            document.getElementById('tonnage').value = tonnage;
+                            localStorage.setItem("passengerCapacity", passengerCapacity);
+                            document.getElementById('passengerCapacity').value = passengerCapacity;
+                            localStorage.setItem("productionAddress", productionAddress);
+                            document.getElementById('productionAddress').value = productionAddress;
+                            
+
+                        } else if (dropZoneId === 'dropZone2') {
+                            idCardResult = data;
+                            //处理身份证识别结果
+                            //提取姓名
+                            const name = data.substring(data.indexOf("姓名")+2, data.indexOf("性别")).trim();
+                            
+
+                            //提取性别
+                            const gender = data.substring(data.indexOf("性别")+2, data.indexOf("民族")).trim();
+                           
+
+                            //提取民族
+                            const nationality = data.substring(data.indexOf("民族")+2, data.indexOf("出生")).trim();
+                            
+
+                            //提取住址
+                            const address = data.substring(data.indexOf("址")+1, data.indexOf("公民")).trim();
+                           
+
+                            //提取公民身份证号码
+                            const idCardNumber = data.substring(data.indexOf("号码")+2, data.indexOf("号码")+21).trim();
+                            
+                            
+                            //将提取到的数据存储到本地并更新表单
+                            localStorage.setItem("name", name);
+                            document.getElementById('name').value = name;
+                            localStorage.setItem("gender", gender);
+                            document.getElementById('gender').value = gender;
+                            localStorage.setItem("nationality", nationality);
+                            document.getElementById('nationality').value = nationality;
+                            localStorage.setItem("address", address);
+                            document.getElementById('address').value = address;
+                            localStorage.setItem("idCardNumber", idCardNumber);
+                            document.getElementById('idCardNumber').value = idCardNumber;
+
+
+
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        // 发生错误时清空对应的结果
+                        if (dropZoneId === 'dropZone1') {
+                            certificateResult = null;
+                        } else if (dropZoneId === 'dropZone2') {
+                            idCardResult = null;
+                        }
+                    })
+                    .finally(() => {
+                        dropZoneText.classList.remove('loading');
+                    });
+                };
+
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // 初始化两个拖拽区域
+        initDropZone('dropZone1', 'result1');
+        initDropZone('dropZone2', 'result2');
+        
+        // 切换显示区域函数
+        function toggleSection(section) {
+            currentSection = section;
+            if(section === 'form') {
+                document.querySelector('.result-form').style.display = 'block';
+                document.querySelector('.download-section').style.display = 'none';
+            } else {
+                document.querySelector('.result-form').style.display = 'none';
+                document.querySelector('.download-section').style.display = 'block';
+               
+            }
+        }
+
+        // 下载功能函数
+        function downloadInvoiceData() {
+            // 实现发票数据下载逻辑
+            // 从本地存储中获取数据
+            const certificateNumber = localStorage.getItem("certificateNumber");
+            const brand_vehicleModel = localStorage.getItem("brand_vehicleModel");
+            const type = localStorage.getItem("type");
+            const engineModel = localStorage.getItem("engineModel");
+            const vehicleFrameNumber = localStorage.getItem("vehicleFrameNumber");
+            const tonnage = localStorage.getItem("tonnage");
+            const passengerCapacity = localStorage.getItem("passengerCapacity");
+            const productionAddress = localStorage.getItem("productionAddress");
+            const name = localStorage.getItem("name");
+            const gender = localStorage.getItem("gender");
+            const nationality = localStorage.getItem("nationality");
+            const address = localStorage.getItem("address");
+            const idCardNumber = localStorage.getItem("idCardNumber");
+            const backgroundNumber = localStorage.getItem("backgroundNumber") || 1;
+            
+
+            // 生成文本文档内容
+            //生成文本文档下载链接
+            //第一行为 线	发票代码	发票号码	统一章	开票人	地址	开户银行	银行账号	电话	纳税人识别号	销货单位	税控码	机关代码	主管税务	机打代码	机打号码	机器编码	开票日期	背景图片	公司章	合格证编号	车辆类型	厂牌型号	车架号码	发动机号码	产地	人数	大写金额	小写金额	增值税金额	不含税	姓名	身份证号	吨位
+            //第二行为对应数据
+            const textContent = `线\t发票代码\t发票号码\t统一章\t开票人\t地址\t开户银行\t银行账号\t电话\t纳税人识别号\t销货单位\t税控码\t机关代码\t主管税务\t机打代码\t机打号码\t机器编码\t开票日期\t背景图片\t公司章\t合格证编号\t车辆类型\t厂牌型号\t车架号码\t发动机号码\t产地\t人数\t大写金额\t小写金额\t增值税金额\t不含税\t姓名\t身份证号\t吨位`;
+            
+
+            // 生成文本文档内容,文档格式为ANSI编码
+            
+            const textContent1 = `\n1\t${certificateNumber}\t${brand_vehicleModel}\t${type}\t${engineModel}\t${vehicleFrameNumber}\t${tonnage}\t${passengerCapacity}\t${productionAddress}\t${name}\t${gender}\t${nationality}\t${address}\t${idCardNumber}`;
+
+            const blob = new Blob([textContent, textContent1], { type: 'text/plain;charset=ANSI' });
+            const url = URL.createObjectURL(blob);
+
+            // 创建下载链接
+            const link = document.createElement('a');
+            link.href = url;
+            link.download = 'invoice_data.txt';
+
+            // 模拟点击下载链接
+            link.click();
+
+            // 释放URL对象
+            URL.revokeObjectURL(url);
+        }
+
+  
+
+        function downloadVerificationData() {
+            // 实现验真数据下载逻辑
+        }
+
+        function downloadContractData() {
+            // 实现合同数据下载逻辑
+        }
+        
+        // 清空表单数据函数
+        function clearForm() {
+            //遍历输入框（除了背景数量输入框），清空值
+            const inputs = document.querySelectorAll('.result-form input');
+            inputs.forEach(input => {
+                input.value = '';
+                //背景数量值从localStorage中获取
+                document.getElementById('backgroundNumber').value = localStorage.getItem('backgroundNumber') || 1;
+            });
+
+
+            
+            // 清空识别结果
+            certificateResult = null;
+            idCardResult = null;
+        }
+       
+    </script>
+
+        <!-- 下载选项区域 -->
+        <div class="download-section" style="display:none;">
+            <h3 style="text-align: center; margin: 30px 0; color: #3498db; font-size: 24px; font-weight: 600; padding-bottom: 15px; border-bottom: 2px solid #3498db;">请选择需要下载的数据类型</h3>
+            <div style="display: flex; justify-content: center; margin-bottom: 40px; gap: 20px;">
+                <button class="download-btn" onclick="downloadInvoiceData()">发票数据</button>
+                <button class="download-btn" onclick="downloadVerificationData()">验真数据</button>
+                <button class="download-btn" onclick="downloadContractData()">合同数据</button>
+            </div>
+            <div class="form-actions" style="text-align: center; margin-top: 20px;">
+                <button onclick="toggleSection('form')" style="padding: 12px 24px; margin-top: 30px; background-color: #95a5a6; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 15px;">返回表单信息</button>
+            </div>
+        </div>
+
+
+     <!-- 结果展示表单 -->
+     <div class="result-form">
+        <div class="form-section">
+                <div class="form-row">
+                    <label>合格证编号:</label>
+                    <input type="text" id="certificateNumber" >
+                </div>
+                <div class="form-row">
+                    <label>品牌型号:</label>
+                    <input type="text" id="brand_vehicleModel" >
+                </div>
+                <div class="form-row">
+                    <label>类型:</label>
+                    <input type="text" id="type" >
+                </div>
+                <div class="form-row">
+                    <label>发动机型号:</label>
+                    <input type="text" id="engineModel" >
+                </div>
+                <div class="form-row">
+                    <label>车架号:</label>
+                    <input type="text" id="vehicleFrameNumber" >
+                </div>
+                <div class="form-row">
+                    <label>吨位:</label>
+                    <input type="text" id="tonnage" >
+                </div>
+                <div class="form-row">
+                    <label>载客量:</label>
+                    <input type="text" id="passengerCapacity" >
+                </div>
+                <div class="form-row">
+                    <label>生产地址:</label>
+                    <input type="text" id="productionAddress" >
+                </div>
+
+                <div class="form-row">
+                    <label>姓名:</label>
+                    <input type="text" id="name" >
+                </div>
+                <div class="form-row">
+                    <label>性别:</label>
+                    <input type="text" id="gender" >
+                </div>
+                <div class="form-row">
+                    <label>民族:</label>
+                    <input type="text" id="nationality" >
+                </div>
+                <div class="form-row">
+                    <label>身份证号码:</label>
+                    <input type="text" id="idCardNumber" >
+                </div>
+                <div class="form-row" style="width: 100%;">
+                    <label>住址:</label>
+                    <input type="text" id="address" >
+                </div>
+                <div class="form-row">
+                    <label>发票地区:</label>
+                    <input type="text" id="invoiceArea" onblur="refreshCompany()">
+                        
+                </div>
+                <div class="form-row" onclick="refreshCompany()">
+                    <label>公司名称:</label>
+                    <input type="text" id="companyName" disabled >
+                </div>
+                <div class="form-row">
+                    <label>背景数量:</label>
+                    <input type="text" id="backgroundNumber" onload="getBackgroundCount()">
+                </div>
+                <div class="form-row">
+                    <label>发票金额:</label>
+                    <input type="text" id="invoiceAmount" onkeyup="invoice(this.value)" >
+                </div>
+                <div class="form-row">
+                    <label>大写金额:</label>
+                    <input type="text" id="invoiceAmountInChinese" >
+                </div>
+                <div class="form-row">
+                    <label>小写金额:</label>
+                    <input type="text" id="invoiceAmountInDigits" >
+                </div>
+                <div class="form-row">
+                    <label>增值税额:</label>
+                    <input type="text" id="vatAmount" >
+                </div>
+                <div class="form-row">
+                    <label>不含税额:</label>
+                    <input type="text" id="taxExcludedAmount" >
+                </div>
+            </div>
+            <div class="form-actions" style="text-align: center; margin-top: 20px;">
+                <button id="applyInfoBtn" style="padding: 10px 20px; background-color: #3498db; color: white; border: none; border-radius: 4px; cursor: pointer;">应用信息</button>
+                <button onclick="clearForm()" style="padding: 10px 18px; margin-top: 30px; margin-left: 20px; background-color: #e74c3c; color: white; border: none; border-radius: 6px; cursor: pointer; transition: all 0.3s ease; font-size: 12px;">清空数据</button>
+            </div>
+    </div>
+
+
+    <style>
+        .result-form,.download-section {
+            margin-top: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 16px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+            width: 100%;
+            max-width: 1200px;
+            margin-left: auto;
+            margin-right: auto;
+        }
+        
+        .result-form h2 {
+            color: #2c3e50;
+            font-size: 24px;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .result-form h3 {
+            color: #2c3e50;
+            font-size: 18px;
+            margin-bottom: 15px;
+            border-bottom: 1px solid #e0e0e0;
+            padding-bottom: 8px;
+        }
+        
+        .form-section {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            justify-content: space-between;
+        }
+        
+        .form-row {
+            display: flex;
+            flex-grow: 1;
+            min-width: 200px;
+            max-width: 100%;
+            margin-bottom: 8px;
+            align-items: center;
+        }
+
+        .form-row label {
+            min-width: 80px;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-right: 10px;
+            align-self: center;
+        }
+
+        .form-row input {
+            flex: 1;
+            min-width: 120px;
+            padding: 8px 12px;
+            border: 1px solid #e0e0e0;
+            border-radius: 4px;
+            font-size: 14px;
+        }
+        
+        @media (max-width: 768px) {
+            .form-grid {
+                grid-template-columns: 1fr;
+            }
+        }
+    </style>
+
+    <script>
+        document.getElementById('applyInfoBtn').addEventListener('click', function() {
+            // 获取所有表单输入框的值并更新到localStorage
+            const inputs = document.querySelectorAll('.result-form .form-section .form-row input');
+            inputs.forEach(input => {
+                localStorage.setItem(input.id, input.value);
+            });
+           //控制台打印localStorage
+            console.log(localStorage);
+            // 显示下载区域
+            toggleSection('download');
+        });
+        //完善refreshCompany（）
+        function refreshCompany() {
+            //获取invoiceArea的值
+            const invoiceArea = document.getElementById('invoiceArea').value;
+            //如果invoiceArea的值为空，则不发送请求
+            if (!invoiceArea) {
+                return;
+            }
+
+            //根据invoiceArea的值获取向http://localhost/shitu/refreshCompany.php发送get请求
+            fetch('http://localhost/shitu/refreshCompany.php?invoiceArea='+invoiceArea)
+            .then(response => response.json())
+            .then(data => {
+                //将data数据所有字段保存到localStorage
+                Object.keys(data).forEach(key => {
+                    localStorage.setItem(key, data[key]);
+                });
+                //将data中的companyName赋值给document.getElementById('companyName').value
+                document.getElementById('companyName').value = data.gongsimingcheng;
+
+            })
+            .catch(error => console.error('Error:', error));
+        }
+
+        //获取背景数量，并赋值给背景数量输入框，页面加载时调用
+        window.onload = function() {
+            getBackgroundCount();
+        }
+        function getBackgroundCount() {
+            //从localStorage中获取backgroundCount，赋值给背景数量输入框，如果数据不存在，则返回1
+            
+            const backgroundCount = localStorage.getItem('backgroundNumber') || 1;
+            document.getElementById('backgroundNumber').value = backgroundCount;
+        }
+        
+
+        //转换大写金额
+        function digitUppercase(n) {
+            var fraction = ['角', '分'];
+            var digit = [
+                '零', '壹', '贰', '叁', '肆',
+                '伍', '陆', '柒', '捌', '玖'
+            ];
+            var unit = [
+                ['圆', '万', '亿'],
+                ['', '拾', '佰', '仟']
+            ];
+            var IsNum = Number(n);
+            if (!isNaN(IsNum)) {
+                var head = n < 0 ? '欠' : '';
+                n = Math.abs(n);
+                var s = '';
+                for (var i = 0; i < fraction.length; i++) {
+                    s += (digit[Math.floor(n * 100/10 * Math.pow(10, i)) % 10] + fraction[i]).replace(/零./, '');
+                }
+                s = s || '整';
+                n = Math.floor(n);
+                for (var i = 0; i < unit[0].length && n > 0; i++) {
+                    var p = '';
+                    for (var j = 0; j < unit[1].length && n > 0; j++) {
+                        p = digit[n % 10] + unit[1][j] + p;
+                        n = Math.floor(n / 10);
+                    }
+                    s = p.replace(/(零.)*零$/, '').replace(/^$/, '零') + unit[0][i] + s;
+                }
+                return head + s.replace(/(零.)*零圆/, '圆')
+                    .replace(/(零.)+/g, '零')
+                    .replace(/^整$/, '零圆整');
+            }
+            else {
+                return "";
+            }
+        };
+
+        //完善invoice
+        function invoice(invoice) {
+
+            //如果invoice的值为空，则返回空
+            if (!invoice) {
+                // return;
+            }
+
+            invoice=invoice*1;
+            //将invoice的值转换为大写金额
+            var invoiceAmountInChinese = digitUppercase(invoice);
+            //大写金额
+            document.getElementById('invoiceAmountInChinese').value = invoiceAmountInChinese;
+            //小写金额(保留两位小数)
+            document.getElementById('invoiceAmountInDigits').value = invoice.toFixed(2);
+            //增值税额
+            document.getElementById('vatAmount').value = (invoice.toFixed(2)-(invoice/1.13).toFixed(2)).toFixed(2);
+            //不含税额
+            document.getElementById('taxExcludedAmount').value = (invoice/1.13).toFixed(2);
+        }
+
+        
+    </script>
+
+</body>
 </html>
